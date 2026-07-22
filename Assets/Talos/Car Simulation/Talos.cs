@@ -1,56 +1,27 @@
-using UnityEngine;
-using UnityEngine.Rendering;
+using System.Collections;
 
-public class Talos : MonoBehaviour
+
+//This is a part of Talos that exposes the public API
+public static class Talos
 {
-    //This is a dongle Between Unity and Talos -> Must be instantiated per vehicle
-
-    //car instance fields
-    private float _throttle;
-
-    private Rpm _carRpm;
-
-    private float _engineOutputTorque;
-    private float _totalGearRatio;
-
-    private float[] _frictionCoefficients;
-
-    private clutchData _clutchData;
-    TransmissionData transmissionData;
-    private EngineStates _engineState;
-
-    private CarStats _carStats;
-
-    void FixedUpdate()
+    //Car Modules
+    public static float TreatThrottle(bool canTreatThrottle, float throttle, float engineRpm, float rpmCap, float idleRpm)
     {
-        TalosTime.SetFixedDeltaTime(Time.fixedDeltaTime);//Plug Talos To unity's fixed Delta time
+        return ECU.TreatRequestedThrottle(canTreatThrottle, throttle, engineRpm, rpmCap, idleRpm);
     }
 
-    public void Accelerate(float throttle)
+    public static clutchData TreatClutch(Rpm carRpm, float clutchEngagement, float engineOutputTorque, float maxClutchTorque)
     {
-        _throttle = TalosVehicleSimulator.TreatThrottle(CanTreatThrottle(_engineState), throttle, _carRpm.engineRpm, _carStats.Engine.RpmCap, _carStats.Engine.IdleRpm);
+        return Clutch.EngageClutch(carRpm, clutchEngagement, engineOutputTorque, maxClutchTorque);
     }
 
-    public void Clutch(float throttle)
+    public static TransmissionData ShiftGear(TransmissionData transmissionData, int shiftDirection)
     {
-        _clutchData =  TalosVehicleSimulator.TreatClutch(throttle, engineOutputTorque, engineOmega, engineOmega, _carStats.Clutch.MaxClutchTorque);
+        return Transmission.Shift(transmissionData, shiftDirection);
     }
 
-    public void ShiftGear(TransmissionData transmissionData, int shiftDirection)
+    public static void Tick(float  physicsTick)
     {
-        TalosVehicleSimulator.ShiftGear(transmissionData, shiftDirection);
-    }
-
-    private bool CanTreatThrottle(EngineStates engineState)
-    {
-        if(engineState == EngineStates.Stalled)
-            return false;
-
-        return true;
-    }
-
-    private void ComputeEngineOutputTorque()
-    {
-        _engineOutputTorque = TalosPhysics.EngineOutputTorque(TalosPhysics.ComputeGeneratedEngineTorque(_carStats.Engine.TorqueCurve.Evaluate(_engineRpm), _throttle), TalosPhysics.ComputeFrictionTorque(_frictionCoefficients, 1, TalosMath.RpmToRadS(_engineRpm), _throttle));
+        TalosTime.SetFixedDeltaTime(physicsTick);
     }
 }
