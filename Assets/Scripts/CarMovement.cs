@@ -18,29 +18,27 @@ public class CarMovement : CarMovementBluePrint
     [SerializeField] private CarPartsGetter _carPartsGetter;
     [SerializeField] private Rigidbody _currentCarRb;
     [SerializeField] private float _wheelRotMaxSpeed = 1f;
-    [SerializeField] private TMP_Text _currentSpeed;
 
+    private AxleData[] _axles;
+    private CarStats _currentCarStats;
 
     //------------DO NOT DELETE YET------------
-    [SerializeField] private TMP_Text _EngineRpmTMP;
+    private TMP_Text _EngineRpmTMP;
     private TMP_Text _DrivetrainRpmTMP;
     private TMP_Text _EngineStatus;
     private TMP_Text _EngineOutputTorque;
     private TMP_Text _currentGearTMP;
     private TMP_Text _batteryStatusTMP;
+    private TMP_Text _currentSpeed;
+    //-------------------------------------------
 
-    private AxleData[] _axles;
-    private CarStats _currentCarStats;
-    //------------------------------------------
-
-
+    private TalosVehicleSimulator talos;
 
     /* [SerializeField]private EnvironmentData _currentEvironment; */
-    /* private EngineOilData _currentEngineOil; */
+    /* private EngineOilData _currentEngineOil; */  
 
     private void Start()
     {
-        GetWheels();
         _currentSpeed = GameObject.FindGameObjectWithTag("speed").GetComponent<TMP_Text>();
         _EngineRpmTMP = GameObject.FindGameObjectWithTag("erpm").GetComponent<TMP_Text>();
         _DrivetrainRpmTMP = GameObject.FindGameObjectWithTag("drpm").GetComponent<TMP_Text>();
@@ -48,10 +46,18 @@ public class CarMovement : CarMovementBluePrint
         _EngineOutputTorque = GameObject.FindGameObjectWithTag("engineo").GetComponent<TMP_Text>();
         _currentGearTMP = GameObject.FindGameObjectWithTag("gear").GetComponent<TMP_Text>();
         _batteryStatusTMP = GameObject.FindGameObjectWithTag("batterys").GetComponent<TMP_Text>();
+
+        _currentCarRb = GetComponent<Rigidbody>();
+        _carPartsGetter = GetComponent<CarPartsGetter>();
+        GetWheels();
+
+        talos = new TalosVehicleSimulator(_currentCarStats, _axles);
+        talos.Init();
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
+        talos.OnTick(Time.fixedDeltaTime);
     }
 
 
@@ -59,16 +65,7 @@ public class CarMovement : CarMovementBluePrint
 
     public override void Accelerate(float throttle)
     {
-        foreach(var axle in _axles)
-        {
-            if (axle.IsDrivenAxle)
-            {
-                foreach(var wheel in axle.Wheels)
-                {
-
-                }
-            }
-        }
+        talos.Accelerate(throttle);
     }
 
     public override void Startup()
@@ -81,14 +78,17 @@ public class CarMovement : CarMovementBluePrint
 
     public override void Brake(float Throttle)
     {
+        talos.Brake(Throttle);
     }
 
     public override void HandBrake(float input)
     {
+        talos.HandBrake(input);
     }
 
     public override void Turn(float direction)
     {
+        talos.Turn(direction);
     }
 
     public override void ToggleLights()
@@ -97,12 +97,15 @@ public class CarMovement : CarMovementBluePrint
 
     public override void SwitchGears(int newGear)
     {
+        talos.ShiftGear(newGear);
     }
 
     public override void Clutch(float clutchEngagement)
     {
+        talos.Clutch(clutchEngagement);
     }
 
+#region Helpers
     private void GetWheels()//Can be better
     {
         _axles = _carPartsGetter.GetAxlesData();
@@ -120,8 +123,8 @@ public class CarMovement : CarMovementBluePrint
     {
         _currentCarRb.mass = _currentCarStats.CarWheight;
     }
-
-    #region Public API
+#endregion
+#region Public API
     public void GetCurrentCarStats(CarStats newCarStats)//can be better
     {
         _currentCarStats = newCarStats;
@@ -137,5 +140,5 @@ public class CarMovement : CarMovementBluePrint
     {
         /*_currentEngineOil = newEngineOil;*/
     }
-    #endregion
+#endregion
 }

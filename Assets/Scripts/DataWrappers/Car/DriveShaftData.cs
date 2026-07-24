@@ -10,5 +10,5 @@ public class DriveShaftData
     [Tooltip("If this field is checked, this wheel will rotate in the opposite direction of the rotation")]
     public bool MirrorRotation;
 
-    public float MaxRotationAngle;
+    public float MaxSteerAngle;
 }

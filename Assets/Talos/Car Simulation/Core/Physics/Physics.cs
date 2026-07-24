@@ -58,9 +58,9 @@ public static class TalosPhysics
         return (engineTorque - frictionTorque);
     }
 
-    public static float DriveTrainOutputTorque(float engineOutputTorque, float clutchTorque, float totalGearRatio, bool isEngaged)// Can still be upgraded further **
+    public static float DriveTrainOutputTorque(float engineOutputTorque, float clutchTorque, float totalGearRatio, bool isClutchEngaged)// Can still be upgraded further **
     {
-        float outputTorque = (!isEngaged) ? clutchTorque : engineOutputTorque;
+        float outputTorque = (!isClutchEngaged) ? clutchTorque : engineOutputTorque;
 
         return (outputTorque * totalGearRatio);
     }

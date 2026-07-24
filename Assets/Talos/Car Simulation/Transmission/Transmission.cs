@@ -25,15 +25,18 @@ public static class Transmission
         if (transmissionData.Gear == -1)
         {
             transmissionData.TotalGearRatio = transmissionData.ReverseGear * transmissionData.FinalDrive;
+            transmissionData.TransmissionState = TransmissionStates.InGear;
             return transmissionData;
         }
         if (transmissionData.Gear == 0)
         {
             transmissionData.TotalGearRatio = 0;
+            transmissionData.TransmissionState = TransmissionStates.Neutral;
             return transmissionData;
         }
 
         transmissionData.TotalGearRatio = transmissionData.TotalGears[transmissionData.Gear - 1] * transmissionData.FinalDrive;
+        transmissionData.TransmissionState = TransmissionStates.InGear;
         return transmissionData;
     }
 }
@@ -51,4 +54,6 @@ public struct TransmissionData
     public float FinalDrive;
 
     public float[] TotalGears;
+
+    public TransmissionStates TransmissionState;
 }

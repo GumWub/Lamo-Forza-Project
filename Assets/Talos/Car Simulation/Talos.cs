@@ -4,6 +4,11 @@ using System.Collections;
 //This is a part of Talos that exposes the public API
 public static class Talos
 {
+    public static void Tick(float  physicsTick)
+    {
+        TalosTime.SetFixedDeltaTime(physicsTick);
+    }
+
     //Car Modules
     public static float TreatThrottle(bool canTreatThrottle, float throttle, float engineRpm, float rpmCap, float idleRpm)
     {
@@ -20,8 +25,23 @@ public static class Talos
         return Transmission.Shift(transmissionData, shiftDirection);
     }
 
-    public static void Tick(float  physicsTick)
+    public static float ComputeDrivetrainOutputTorque(float engineOutputTorque, float clutchTorque, float totalGearRatio, bool isClutchEngaged)
     {
-        TalosTime.SetFixedDeltaTime(physicsTick);
+        return TalosPhysics.DriveTrainOutputTorque(engineOutputTorque, clutchTorque, totalGearRatio, isClutchEngaged);
+    }
+
+    public static float ComputeServiceBrakeTorque(float brakeEngagement, float maxBrakeTorque)
+    {
+        return brakeEngagement * maxBrakeTorque;
+    }
+
+    public static float ComputeParkingBrakeTorque(float handbrakeEngagement, float maxBrakeTorque)
+    {
+        return handbrakeEngagement * maxBrakeTorque;
+    }
+
+    public static float ComputeSteeringAngle(float currentSteeringAngle, float targetSteeringAngle, float steeringSpeed)
+    {
+        return TalosMath.Lerp(currentSteeringAngle, targetSteeringAngle, steeringSpeed * TalosTime.FixedDeltaTime);
     }
 }
