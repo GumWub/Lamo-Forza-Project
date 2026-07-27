@@ -1,10 +1,10 @@
-using System;
+    using System;
 
 public static class TalosPhysics
 {
-    internal static float ComputeTotalInertia(bool isClutchEngaged,float engineGroupInertia, float drivetrainGroupInertia)    
+    internal static float ComputeTotalInertia(bool isEngineAndDrivetrainUnlocked,float engineGroupInertia, float drivetrainGroupInertia)    
     {
-        if (!isClutchEngaged)
+        if (!isEngineAndDrivetrainUnlocked)
         {
             return engineGroupInertia;
         }
@@ -23,7 +23,7 @@ public static class TalosPhysics
         return engineGroupInertia;//much better
     }
 
-    internal static float ComputeDrivetrainInertia(float[] drivetrainInertiaElements)
+    internal static float ComputeDrivetrainGroupInertia(float[] drivetrainInertiaElements)
     {
         float drivetrainInertia = 0;
 

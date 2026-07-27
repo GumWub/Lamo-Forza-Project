@@ -2,7 +2,7 @@ using System;
 public static class Clutch
 {
     //Let's keep it Stateless !
-    internal static clutchData EngageClutch(Rpm carRpm, float clutchEngagement, float engineOutputTorque, float maxClutchTorque)
+    public static clutchData EngageClutch(Rpm carRpm, float clutchEngagement, float engineOutputTorque, float maxClutchTorque)
     {
         clutchData clutchData;
 

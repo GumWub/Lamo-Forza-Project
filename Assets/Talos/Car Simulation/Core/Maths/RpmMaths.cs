@@ -3,7 +3,7 @@ using System;
 public static class RpmMaths
 {
     //Let's keep it stateless
-    private static Rpm ComputeRPM(RpmArguments data)
+    public static Rpm ComputeRPM(RpmArguments data)
     {
 
         if (!data.CanComputeRpm)//if the engine is not stalled and other conditions

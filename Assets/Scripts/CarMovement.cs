@@ -58,6 +58,11 @@ public class CarMovement : CarMovementBluePrint
     private void FixedUpdate()
     {
         talos.OnTick(Time.fixedDeltaTime);
+        _EngineRpmTMP.text = $"{talos.CarRpm.engineRpm}";
+        _DrivetrainRpmTMP.text = $"{talos.CarRpm.drivetrainRpm}";
+        _currentGearTMP.text = $"{talos.TransmissionData.Gear}";
+        _EngineOutputTorque.text = $"{talos.engineOutputTorque}";
+        _currentSpeed.text = $"{talos.ClutchTorque}";
     }
 
 
@@ -70,10 +75,12 @@ public class CarMovement : CarMovementBluePrint
 
     public override void Startup()
     {
+        StartCoroutine(talos.EngineStartupRoutine());
     }
 
     public override void Shutdown()
     {
+        talos.StopEngine();
     }
 
     public override void Brake(float Throttle)

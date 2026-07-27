@@ -44,4 +44,24 @@ public static class Talos
     {
         return TalosMath.Lerp(currentSteeringAngle, targetSteeringAngle, steeringSpeed * TalosTime.FixedDeltaTime);
     }
+
+    public static Rpm ComputeRpm(RpmArguments data)
+    {
+        return RpmMaths.ComputeRPM(data);
+    }
+
+    public static float ComputeTotalInertia(bool isEngineAndDrivetrainUnlocked, float engineGroupInertia, float drivetrainGroupInertia)
+    {
+        return TalosPhysics.ComputeTotalInertia(isEngineAndDrivetrainUnlocked, engineGroupInertia, drivetrainGroupInertia);
+    }
+
+    public static float ComputeEngineSideInertia(float[] engineInertias)
+    {
+        return TalosPhysics.ComputeEngineGroupInertia(engineInertias);
+    }
+
+    public static float ComputeDrivetrainInertia(float[] drivetrainInertias)
+    {
+        return TalosPhysics.ComputeDrivetrainGroupInertia(drivetrainInertias);
+    }
 }

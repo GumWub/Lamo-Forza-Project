@@ -4,12 +4,12 @@ public static class Transmission
 {
     //Let's keep it stateless!
 
-    public static TransmissionData Shift( TransmissionData transmissionData, int ShiftDirection)//ShiftDirection can either be 1 or -1, means it's either an upshift or a downshift
+    public static TransmissionData Shift( TransmissionData transmissionData, int shiftDirection)//ShiftDirection can either be 1 or -1, means it's either an upshift or a downshift
     {
-        if (!transmissionData.CanShift||ShiftDirection == 0)
+        if (!transmissionData.CanShift||shiftDirection == 0)
             return transmissionData;
 
-       transmissionData.Gear = Math.Clamp(transmissionData.Gear + ShiftDirection, -1, 1);
+       transmissionData.Gear = Math.Clamp(transmissionData.Gear + shiftDirection, -1, transmissionData.TotalGears.Length);
         SetGear(transmissionData);
 
         return transmissionData;
@@ -18,9 +18,8 @@ public static class Transmission
     private static TransmissionData SetGear(TransmissionData transmissionData)
     {
         if (transmissionData.Gear < -1 || transmissionData.Gear > transmissionData.TotalGears.Length)
-        {
             return transmissionData;
-        }
+        
 
         if (transmissionData.Gear == -1)
         {

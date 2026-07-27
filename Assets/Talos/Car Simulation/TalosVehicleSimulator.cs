@@ -1,11 +1,11 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 public class TalosVehicleSimulator
 {
     //This is a dongle Between Unity and Talos -> Must be instantiated per vehicle/Stateful instance, unlike Talos
-    //This Entire Goddamn Class is a mess, I'm using a fuckass Coroutine inside POCO class (smells like homeless doodoo)
-
+    //This Entire Goddamn Class is a mess, I'm using a Coroutine inside POCO class (smells like homeless doodoo)
+    //Update: this class knows Way too much, like, inertia and torque musn't be here:: TODO: purge this class and strip it of physics notions, conditions, and useless private methods
 
     //Input Related Fields
     private float _throttle;
@@ -14,6 +14,8 @@ public class TalosVehicleSimulator
     private float _engineOutputTorque;
     private float _steeringSpeed;
     private float _steeringDirection;
+    private float _engineInertia;
+    private float _drivetrainInertia;
     private float[] _frictionCoefficients;
 
     //Car Modules Related Fields
@@ -37,12 +39,15 @@ public class TalosVehicleSimulator
     //Properties
     public TransmissionData TransmissionData => _transmissionData;
     public Rpm CarRpm => _carRpm;
-    
+    public float engineOutputTorque => _engineOutputTorque;
+    public float ClutchTorque => _clutchData.clutchTorque;
+
     //Methods
     public void Init()//Must be called before the first frame. (Awake)
     {
         InitInputs();
         InitFrictionCoefficients();
+        InitInertia();
         InitTransmission();
         InitClutch();
         InitEngine();
@@ -52,6 +57,11 @@ public class TalosVehicleSimulator
     public void OnTick(float physicsTick)//Must be Called Once Per Physics Tick. (FixedUpdate)
     {
         Talos.Tick(physicsTick);//Plug Talos To unity's fixed Delta time
+
+        ComputeEngineOutputTorque();//used for RPM computation
+
+        UpdateRpm();//Compute Rpm - needed for other operations.
+
         HandleEngine();//Engine State Stuff
 
         //This is necessary, we don't want the stupid dev to fuck up our work, we know better right? so WE (yes we) will handle sending our torque to the wheels.
@@ -60,7 +70,7 @@ public class TalosVehicleSimulator
 
     public void Accelerate(float throttle)
     {
-        _throttle = Talos.TreatThrottle(CanTreatThrottle(_engineState), throttle, _carRpm.engineRpm, _carStats.Engine.RpmCap, _carStats.Engine.IdleRpm);
+        _throttle = Talos.TreatThrottle(CanTreatThrottle(), throttle, _carRpm.engineRpm, _carStats.Engine.RpmCap, _carStats.Engine.IdleRpm);
     }
 
     public void Clutch(float throttle)
@@ -90,7 +100,6 @@ public class TalosVehicleSimulator
 
     public void StartUpEngine()
     {   
-        EngineStartupRoutine();//Both Startup and shutdown must be handled inside Talos.
     }
 
     public void StopEngine()
@@ -103,7 +112,7 @@ public class TalosVehicleSimulator
         //Implement it ASAP twin
     }
 
-#region Init//I'm lowkey proud of this class, It still can be improved, some methods may seem unecessary but they can be still be used to implement new stuff, it's for the sake of modularity, scalability and readability.
+#region Init                    //I'm lowkey proud of this class, It still can be improved, some methods may seem unecessary but they can be still be used to implement new stuff, it's for the sake of modularity, scalability and readability.
 private void InitInputs()
 {
     _throttle = 0;
@@ -141,7 +150,7 @@ private void InitTransmission()//May the wind guide my hand (There's something m
 private void InitClutch()
 {
     _clutchData.clutchTorque = 0;
-    _clutchData.clutchState = ClutchStates.Engaged;
+    _clutchData.clutchState = ClutchStates.Disengaged;
 }
 
 private void InitEngine()
@@ -155,9 +164,69 @@ private void InitRpm()
     _carRpm.engineRpm = 0;
     _carRpm.drivetrainRpm = 0;
 }
+
+private void InitInertia()//horrible stuff, needs a class for initialisation - preferably a static one
+{
+    //init engine Inertia
+    float[] engineInertia = new float[4];
+
+    engineInertia[0] = _carStats.Engine.FlyWheel.Inertia;
+    engineInertia[1] = _carStats.Engine.CrankShaft.Inertia;
+    engineInertia[2] = _carStats.Gearbox.EngineSideInertia;
+    engineInertia[3] = _carStats.Clutch.Inertia;
+
+    _engineInertia = Talos.ComputeEngineSideInertia(engineInertia);
+
+
+    //init drivetrain Inertia
+    float[] drivetrainInertia = new float[1];
+
+    drivetrainInertia[0] = _carStats.Gearbox.DrivetrainSideInertia;
+
+    _drivetrainInertia = Talos.ComputeDrivetrainInertia(drivetrainInertia);
+}
 #endregion
 
-#region private Methods //90% of this class will Go.
+#region private Methods         //90% of this region will Go.
+
+    private void UpdateRpm()
+    {
+        //Setup Rpm Arguments
+        RpmArguments rpmArgs = new RpmArguments();
+        rpmArgs.AxleData = SetAxleRpmData();
+        rpmArgs.PreviousRpm = _carRpm;
+
+        rpmArgs.NetTorque = TalosPhysics.ComputeNetTorque(TalosPhysics.ComputeMotorTorque(IsEngineStarting(), _carStats.Engine.Starter.Torque, _engineOutputTorque),TalosPhysics.ComputeLoadTorque(IsNeutral(), _clutchData.clutchTorque));
+        rpmArgs.TotalInertia = Talos.ComputeTotalInertia(IsEngineAndDrivetrainUnlocked(), _engineInertia, _drivetrainInertia);
+        
+        rpmArgs.TotalGearRatio = _transmissionData.TotalGearRatio;
+        rpmArgs.CanComputeRpm = CanComputeRpm();
+        rpmArgs.IsEngineAndDrivetrainLocked = IsEngineAndDrivetrainLocked();
+
+        //Compute Rpm
+        _carRpm = Talos.ComputeRpm(rpmArgs);
+    }
+
+    private AxleRpmData[] SetAxleRpmData()
+    {
+        AxleRpmData[] axleRpmData = new AxleRpmData[_axles.Length];
+
+        //my brain, my eyes, and my hands are screaming, i don't have neither auto suggestions nor autocomplete, i typed this entire bs manually
+
+        for(int axle = 0; axle < _axles.Length; axle++)
+        {
+            axleRpmData[axle].WheelRpm = new float[_axles[axle].Wheels.Length];
+
+            for (int wheel = 0; wheel < _axles[axle].Wheels.Length; wheel++)
+            {
+                axleRpmData[axle].WheelRpm[wheel] = _axles[axle].Wheels[wheel].WheelCol.rpm;
+            }
+
+            axleRpmData[axle].TorqueBias = _axles[axle].TorqueAxleSplit;
+        }
+
+        return axleRpmData;
+    }
 
     private void HandleEngine()//Horrible Class, Needs To go ASAP and be replaced by real Fucking Physics.
     {
@@ -177,6 +246,14 @@ private void InitRpm()
         _engineState = EngineStates.Stalled;
     }
 
+    private void ComputeEngineOutputTorque()
+    {
+        float netGeneratedTorque = TalosPhysics.ComputeGeneratedEngineTorque(_carStats.Engine.TorqueCurve.Evaluate(_carRpm.engineRpm), _throttle);
+        float netFrictionTorque = TalosPhysics.ComputeFrictionTorque(_frictionCoefficients, 1/*Oil Viscosity, Will be replaced later*/, TalosMath.RpmToRadS(_carRpm.engineRpm), _throttle);
+
+        _engineOutputTorque = TalosPhysics.EngineOutputTorque(netGeneratedTorque, netFrictionTorque);
+    }
+
     private void SendOutputTorqueToWheels()//includes the handbrakes and brakes, there's a better way to do this, will think about it as soon as the game runs.
     {
         foreach(var axle in _axles)
@@ -184,7 +261,7 @@ private void InitRpm()
             foreach(var wheel in axle.Wheels)
             {
                 if(axle.IsDrivenAxle)
-                    wheel.WheelCol.motorTorque = Talos.ComputeDrivetrainOutputTorque(TalosPhysics.EngineOutputTorque(TalosPhysics.ComputeGeneratedEngineTorque(_carStats.Engine.TorqueCurve.Evaluate(_carRpm.engineRpm), _throttle), TalosPhysics.ComputeFrictionTorque(_frictionCoefficients, 1, TalosMath.RpmToRadS(_carRpm.engineRpm), _throttle)), _clutchData.clutchTorque, _transmissionData.TotalGearRatio, IsClutchEngaged(_clutchData.clutchState));
+                    wheel.WheelCol.motorTorque = Talos.ComputeDrivetrainOutputTorque(_engineOutputTorque, _clutchData.clutchTorque, _transmissionData.TotalGearRatio, IsClutchEngaged());
                 if(wheel.Brake.IsServiceBrake)
                     wheel.WheelCol.brakeTorque = Talos.ComputeServiceBrakeTorque(_serviceBrakeEngagement, wheel.Brake.ServiceBrakeTorque);
                 if(wheel.Brake.IsParkingBrake)
@@ -197,9 +274,9 @@ private void InitRpm()
 #endregion
 
 #region Coroutines//EW vibes, needs to go and be implemented inside Talos.
-    IEnumerator EngineStartupRoutine()
+    public IEnumerator EngineStartupRoutine()
     {
-        if (_engineState != EngineStates.Stalled || (_clutchData.clutchState != ClutchStates.Disengaged || _transmissionState != TransmissionStates.Neutral))
+        if (_engineState != EngineStates.Stalled || (_clutchData.clutchState != ClutchStates.Disengaged && _transmissionState != TransmissionStates.Neutral))
             yield break;
 
         _engineState = EngineStates.Starting;
@@ -212,20 +289,62 @@ private void InitRpm()
 #endregion
 
 #region Conditions//Will make a static class for this.
-    private bool CanTreatThrottle(EngineStates engineState)
+    private bool CanTreatThrottle()
     {
-        if(engineState == EngineStates.Stalled)
+        if(_engineState == EngineStates.Stalled)
             return false;
 
         return true;
     }
 
-    private bool IsClutchEngaged(ClutchStates clutchState)
+    private bool IsClutchEngaged()
     {
-        if(clutchState == ClutchStates.Engaged)
+        if(_clutchData.clutchState == ClutchStates.Engaged)
+            return true;
+
+        return false;
+    }
+
+    private bool CanComputeRpm()
+    {
+        if(_engineState == EngineStates.Stalled)
+            return false;
+
+        return true;
+    }
+
+    private bool IsEngineAndDrivetrainLocked()
+    {
+        if(_clutchData.clutchState == ClutchStates.Engaged && _transmissionState != TransmissionStates.Neutral)
+            return true;
+
+        return false;
+    }
+
+    private bool IsEngineAndDrivetrainUnlocked()
+    {
+        if(_clutchData.clutchState == ClutchStates.Disengaged || _transmissionState == TransmissionStates.Neutral)
+            return true;
+
+        return false;
+    }
+
+    private bool IsEngineStarting()
+    {
+        if(_engineState == EngineStates.Starting)
+            return true;
+
+        return false;
+    }
+
+    private bool IsNeutral()
+    {
+        if(_transmissionState == TransmissionStates.Neutral)
             return true;
 
         return false;
     }
 #endregion
 }
+
+//Lolz monolithic class maxxing all over again
