@@ -135,7 +135,7 @@ public class InputManager : MonoBehaviour
                 Cursor.visible = false;
             }
         }
-
+        clutch = 1-clutch;
         _movementBluePrint.Accelerate(throttle);
         _movementBluePrint.Brake(brake);
         _movementBluePrint.Turn(turn);

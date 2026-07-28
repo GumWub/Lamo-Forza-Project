@@ -15,7 +15,7 @@ public static class Talos
         return ECU.TreatRequestedThrottle(canTreatThrottle, throttle, engineRpm, rpmCap, idleRpm);
     }
 
-    public static clutchData TreatClutch(Rpm carRpm, float clutchEngagement, float engineOutputTorque, float maxClutchTorque)
+    public static ClutchDataStruct TreatClutch(Rpm carRpm, float clutchEngagement, float engineOutputTorque, float maxClutchTorque)
     {
         return Clutch.EngageClutch(carRpm, clutchEngagement, engineOutputTorque, maxClutchTorque);
     }

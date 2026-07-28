@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -12,18 +13,17 @@ public class TalosVehicleSimulator
     private float _serviceBrakeEngagement;
     private float _parkingBrakeEngagement;
     private float _engineOutputTorque;
-    private float _steeringSpeed;
-    private float _steeringDirection;
+    private float _steeringSpeed = 1;
+    private float _steeringDirection = 0;
     private float _engineInertia;
     private float _drivetrainInertia;
     private float[] _frictionCoefficients;
 
     //Car Modules Related Fields
-    private TransmissionStates _transmissionState;
-    private TransmissionData _transmissionData;
-    private clutchData _clutchData;
+    private TransmissionData _transmissionData = new TransmissionData();
+    private ClutchDataStruct _clutchData = new ClutchDataStruct();
     private EngineStates _engineState;
-    private Rpm _carRpm;
+    private Rpm _carRpm = new Rpm();
 
     //Model Related Fields
     private CarStats _carStats;
@@ -41,6 +41,9 @@ public class TalosVehicleSimulator
     public Rpm CarRpm => _carRpm;
     public float engineOutputTorque => _engineOutputTorque;
     public float ClutchTorque => _clutchData.clutchTorque;
+    public ClutchStates CS => _clutchData.clutchState;
+    public TransmissionStates  TS => _transmissionData.TransmissionState;
+    public float _steerAngle;
 
     //Methods
     public void Init()//Must be called before the first frame. (Awake)
@@ -96,6 +99,7 @@ public class TalosVehicleSimulator
     public void Turn(float direction)
     {
         _steeringDirection = direction;
+        _steeringDirection = Math.Clamp(_steeringDirection, -1, 1);
     }
 
     public void StartUpEngine()
@@ -136,8 +140,6 @@ private void InitFrictionCoefficients()
 
 private void InitTransmission()//May the wind guide my hand (There's something missing but i can't prove it)
 {
-    _transmissionState = TransmissionStates.Neutral;
-
     _transmissionData = new TransmissionData();
     _transmissionData.TotalGearRatio = 0;
     _transmissionData.CanShift = true;
@@ -145,6 +147,7 @@ private void InitTransmission()//May the wind guide my hand (There's something m
     _transmissionData.ReverseGear = _carStats.Gearbox.ReverseGear;
     _transmissionData.FinalDrive = _carStats.Gearbox.FinalDrive;
     _transmissionData.TotalGears = _carStats.Gearbox.GearRatio;
+    _transmissionData.TransmissionState = TransmissionStates.Neutral;
 }
 
 private void InitClutch()
@@ -266,8 +269,9 @@ private void InitInertia()//horrible stuff, needs a class for initialisation - p
                     wheel.WheelCol.brakeTorque = Talos.ComputeServiceBrakeTorque(_serviceBrakeEngagement, wheel.Brake.ServiceBrakeTorque);
                 if(wheel.Brake.IsParkingBrake)
                     wheel.WheelCol.brakeTorque = Talos.ComputeParkingBrakeTorque(_parkingBrakeEngagement, wheel.Brake.ParkingBrakeTorque);
-                if(axle.CvAxleData.IsCvShaft)
-                    wheel.WheelCol.steerAngle = Talos.ComputeSteeringAngle(wheel.WheelCol.steerAngle, axle.CvAxleData.MaxSteerAngle*_steeringDirection, _steeringSpeed);
+                if(axle.CvAxleData.IsCvShaft){
+                    wheel.WheelCol.steerAngle = Talos.ComputeSteeringAngle(wheel.WheelCol.steerAngle, axle.CvAxleData.MaxSteerAngle * _steeringDirection, _steeringSpeed);
+                    _steerAngle = wheel.WheelCol.steerAngle;}           
             }
         }
     }
@@ -276,7 +280,7 @@ private void InitInertia()//horrible stuff, needs a class for initialisation - p
 #region Coroutines//EW vibes, needs to go and be implemented inside Talos.
     public IEnumerator EngineStartupRoutine()
     {
-        if (_engineState != EngineStates.Stalled || (_clutchData.clutchState != ClutchStates.Disengaged && _transmissionState != TransmissionStates.Neutral))
+        if (_engineState != EngineStates.Stalled || (_clutchData.clutchState != ClutchStates.Disengaged && _transmissionData.TransmissionState != TransmissionStates.Neutral))
             yield break;
 
         _engineState = EngineStates.Starting;
@@ -307,15 +311,15 @@ private void InitInertia()//horrible stuff, needs a class for initialisation - p
 
     private bool CanComputeRpm()
     {
-        if(_engineState == EngineStates.Stalled)
-            return false;
+        if(_engineState != EngineStates.Stalled)
+            return true;
 
-        return true;
+        return false;
     }
 
     private bool IsEngineAndDrivetrainLocked()
     {
-        if(_clutchData.clutchState == ClutchStates.Engaged && _transmissionState != TransmissionStates.Neutral)
+        if(_clutchData.clutchState == ClutchStates.Engaged && _transmissionData.TransmissionState != TransmissionStates.Neutral)
             return true;
 
         return false;
@@ -323,7 +327,7 @@ private void InitInertia()//horrible stuff, needs a class for initialisation - p
 
     private bool IsEngineAndDrivetrainUnlocked()
     {
-        if(_clutchData.clutchState == ClutchStates.Disengaged || _transmissionState == TransmissionStates.Neutral)
+        if(_clutchData.clutchState == ClutchStates.Disengaged || _transmissionData.TransmissionState == TransmissionStates.Neutral)
             return true;
 
         return false;
@@ -339,7 +343,7 @@ private void InitInertia()//horrible stuff, needs a class for initialisation - p
 
     private bool IsNeutral()
     {
-        if(_transmissionState == TransmissionStates.Neutral)
+        if(_transmissionData.TransmissionState == TransmissionStates.Neutral)
             return true;
 
         return false;

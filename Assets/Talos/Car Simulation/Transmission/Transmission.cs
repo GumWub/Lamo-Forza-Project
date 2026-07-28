@@ -10,7 +10,7 @@ public static class Transmission
             return transmissionData;
 
        transmissionData.Gear = Math.Clamp(transmissionData.Gear + shiftDirection, -1, transmissionData.TotalGears.Length);
-        SetGear(transmissionData);
+       transmissionData = SetGear(transmissionData);
 
         return transmissionData;
     }

@@ -12,12 +12,19 @@ Lord forgive me for the sins i commited and for the blood i have on my hand afte
 */
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
+
 
 public class CarMovement : CarMovementBluePrint
 {
     [SerializeField] private CarPartsGetter _carPartsGetter;
     [SerializeField] private Rigidbody _currentCarRb;
     [SerializeField] private float _wheelRotMaxSpeed = 1f;
+
+
+    public ClutchStates clutchState;
+    public TransmissionStates transmissionState;
+    public float steerAngle;
 
     private AxleData[] _axles;
     private CarStats _currentCarStats;
@@ -30,6 +37,7 @@ public class CarMovement : CarMovementBluePrint
     private TMP_Text _currentGearTMP;
     private TMP_Text _batteryStatusTMP;
     private TMP_Text _currentSpeed;
+    private Slider _clutchSlider;
     //-------------------------------------------
 
     private TalosVehicleSimulator talos;
@@ -46,6 +54,7 @@ public class CarMovement : CarMovementBluePrint
         _EngineOutputTorque = GameObject.FindGameObjectWithTag("engineo").GetComponent<TMP_Text>();
         _currentGearTMP = GameObject.FindGameObjectWithTag("gear").GetComponent<TMP_Text>();
         _batteryStatusTMP = GameObject.FindGameObjectWithTag("batterys").GetComponent<TMP_Text>();
+        _clutchSlider = GameObject.FindGameObjectWithTag("clutch").GetComponent<Slider>();
 
         _currentCarRb = GetComponent<Rigidbody>();
         _carPartsGetter = GetComponent<CarPartsGetter>();
@@ -63,6 +72,10 @@ public class CarMovement : CarMovementBluePrint
         _currentGearTMP.text = $"{talos.TransmissionData.Gear}";
         _EngineOutputTorque.text = $"{talos.engineOutputTorque}";
         _currentSpeed.text = $"{talos.ClutchTorque}";
+    
+        clutchState = talos.CS;
+        transmissionState = talos.TS;
+        steerAngle = talos._steerAngle;
     }
 
 

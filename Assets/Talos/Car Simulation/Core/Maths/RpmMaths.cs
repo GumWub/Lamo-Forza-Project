@@ -7,9 +7,7 @@ public static class RpmMaths
     {
 
         if (!data.CanComputeRpm)//if the engine is not stalled and other conditions
-        {
             return data.PreviousRpm;
-        }
 
         data.PreviousRpm.drivetrainRpm = ComputeDrivetrainRPM(data.AxleData, data.PreviousRpm.drivetrainRpm, data.TotalGearRatio, data.IsHighBandFlag);
 
