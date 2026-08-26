@@ -83,6 +83,7 @@ public class TalosVehicleSimulator
 
     public void ShiftGear(int shiftDirection)
     {
+        _transmissionData.CanShift = CanShift();
         _transmissionData = Talos.ShiftGear(_transmissionData, shiftDirection);
     }
 
@@ -142,7 +143,7 @@ private void InitTransmission()//May the wind guide my hand (There's something m
 {
     _transmissionData = new TransmissionData();
     _transmissionData.TotalGearRatio = 0;
-    _transmissionData.CanShift = true;
+    _transmissionData.CanShift = CanShift();
     _transmissionData.Gear = 0;
     _transmissionData.ReverseGear = _carStats.Gearbox.ReverseGear;
     _transmissionData.FinalDrive = _carStats.Gearbox.FinalDrive;
@@ -344,6 +345,14 @@ private void InitInertia()//horrible stuff, needs a class for initialisation - p
     private bool IsNeutral()
     {
         if(_transmissionData.TransmissionState == TransmissionStates.Neutral)
+            return true;
+
+        return false;
+    }
+
+    private bool CanShift()
+    {
+        if(_clutchData.clutchState == ClutchStates.Disengaged || _engineState == EngineStates.Stalled)
             return true;
 
         return false;

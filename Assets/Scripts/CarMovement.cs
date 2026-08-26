@@ -67,11 +67,22 @@ public class CarMovement : CarMovementBluePrint
     private void FixedUpdate()
     {
         talos.OnTick(Time.fixedDeltaTime);
+
         _EngineRpmTMP.text = $"{talos.CarRpm.engineRpm}";
         _DrivetrainRpmTMP.text = $"{talos.CarRpm.drivetrainRpm}";
-        _currentGearTMP.text = $"{talos.TransmissionData.Gear}";
+
+        if(talos.TransmissionData.Gear == 0){
+            _currentGearTMP.text = "N";
+        }
+        else if(talos.TransmissionData.Gear == -1){
+            _currentGearTMP.text = "R";
+        }
+        else{
+            _currentGearTMP.text = $"{talos.TransmissionData.Gear}";
+        }
         _EngineOutputTorque.text = $"{talos.engineOutputTorque}";
-        _currentSpeed.text = $"{talos.ClutchTorque}";
+
+        _currentSpeed.text = $"{Mathf.Floor(_currentCarRb.linearVelocity.magnitude * 3.6f)}";
     
         clutchState = talos.CS;
         transmissionState = talos.TS;
