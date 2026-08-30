@@ -8,7 +8,6 @@ public static class Talos
     {
         TalosTime.SetFixedDeltaTime(physicsTick);
     }
-
     //Car Modules
     public static float TreatThrottle(bool canTreatThrottle, float throttle, float engineRpm, float rpmCap, float idleRpm)
     {
@@ -63,5 +62,13 @@ public static class Talos
     public static float ComputeDrivetrainInertia(float[] drivetrainInertias)
     {
         return TalosPhysics.ComputeDrivetrainGroupInertia(drivetrainInertias);
+    }
+
+    public static float ComputeEngineOutputTorque(float throttle, float engineRpm, float engineTorque, float[] frictionCoefficients)
+    {
+        float netGeneratedTorque = TalosPhysics.ComputeGeneratedEngineTorque(engineTorque, throttle);
+        float netFrictionTorque = TalosPhysics.ComputeFrictionTorque(frictionCoefficients, 1/*Oil Viscosity, Will be replaced later*/, TalosMath.RpmToRadS(engineRpm), throttle);
+
+        return TalosPhysics.EngineOutputTorque(netGeneratedTorque, netFrictionTorque);
     }
 }

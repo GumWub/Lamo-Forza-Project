@@ -80,6 +80,16 @@ public class CarMovement : CarMovementBluePrint
         else{
             _currentGearTMP.text = $"{talos.TransmissionData.Gear}";
         }
+
+        if(talos.ES == EngineStates.Running){
+            _EngineStatus.text = "on";
+        }
+        else if(talos.ES == EngineStates.Stalled){
+            _EngineStatus.text = "off";
+        }
+        else{
+            _EngineStatus.text = "starting";
+        }
         _EngineOutputTorque.text = $"{talos.engineOutputTorque}";
 
         _currentSpeed.text = $"{Mathf.Floor(_currentCarRb.linearVelocity.magnitude * 3.6f)}";

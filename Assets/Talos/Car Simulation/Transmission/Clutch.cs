@@ -10,9 +10,9 @@ public static class Clutch
         clutchEngagement =(float) TalosMath.Clamp01(clutchEngagement);
 
         //determine the sign of the torque
-        float sign = Math.Sign(TalosMath.RpmToRadS(carRpm.engineRpm) - TalosMath.RpmToRadS(carRpm.drivetrainRpm));
+        float sign = Math.Sign(carRpm.engineRpm - carRpm.drivetrainRpm);
 
-        clutchData.clutchTorque =(sign * Math.Min(Math.Abs(engineOutputTorque), maxClutchTorque * clutchEngagement));
+        clutchData.clutchTorque =(sign * Math.Min(Math.Abs(engineOutputTorque), maxClutchTorque * clutchEngagement));//horrible clutch approach, needs to be modeled better.
         clutchData.clutchState = SetClutchState(clutchEngagement);
 
         return clutchData;

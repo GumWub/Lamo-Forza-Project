@@ -64,16 +64,12 @@ public static class TalosMath
     public static float DynamicFilter(float newValue, float previousValue, bool isHighBand)
     {//this is a band filter. It's a dynamic low band filter that can become a high band filter under some conditions.
         if (float.IsNaN(newValue) || float.IsInfinity(newValue))
-        {
             return previousValue;
-        }
 
         if (float.IsNaN(newValue) || float.IsInfinity(newValue))
-        {
             return previousValue;//Simply return the shit value to the sender
-        }
 
-        float lerpFactor = 0.2f;
+        float lerpFactor = 0.7f;
         float bandTolerance = 500;
 
         if (isHighBand)
@@ -88,11 +84,11 @@ public static class TalosMath
 
         if (fluctuation >= bandTolerance)
         {
-            int zeros = (int)Math.Floor((float)Math.Log10(fluctuation));
-            lerpFactor = (float) Math.Clamp(Math.Pow(10, 1 - zeros), 0, 1);
+            int zeros = (int)Math.Floor((float)Math.Log10(fluctuation));//computes the number of digits after the digit with the highest weight in a number (e.g 600, zeroes = 2 (we skip the 6 and count the rest)/ 7600, zeroes = 3/ 54355, zeroes = 4)
+            lerpFactor = (float) Math.Clamp(7 * Math.Pow(10, 1 - zeros), 0, 1);
         }
 
-        newValue = Lerp(newValue, previousValue, lerpFactor);
+        newValue = Lerp(previousValue, newValue, lerpFactor);
         return newValue;
     }
 }

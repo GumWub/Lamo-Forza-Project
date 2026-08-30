@@ -43,6 +43,7 @@ public class TalosVehicleSimulator
     public float ClutchTorque => _clutchData.clutchTorque;
     public ClutchStates CS => _clutchData.clutchState;
     public TransmissionStates  TS => _transmissionData.TransmissionState;
+    public EngineStates ES => _engineState;
     public float _steerAngle;
 
     //Methods
@@ -65,7 +66,7 @@ public class TalosVehicleSimulator
 
         UpdateRpm();//Compute Rpm - needed for other operations.
 
-        HandleEngine();//Engine State Stuff
+        HandleEngine();//temp func :: TODO: remove this and implement a proper engine state machine
 
         //This is necessary, we don't want the stupid dev to fuck up our work, we know better right? so WE (yes we) will handle sending our torque to the wheels.
         SendOutputTorqueToWheels();//constinuously send torque to wheels
@@ -206,7 +207,7 @@ private void InitInertia()//horrible stuff, needs a class for initialisation - p
         rpmArgs.TotalGearRatio = _transmissionData.TotalGearRatio;
         rpmArgs.CanComputeRpm = CanComputeRpm();
         rpmArgs.IsEngineAndDrivetrainLocked = IsEngineAndDrivetrainLocked();
-
+        rpmArgs.IsHighBandFlag = false;//needs a proper function
         //Compute Rpm
         _carRpm = Talos.ComputeRpm(rpmArgs);
     }
@@ -234,12 +235,12 @@ private void InitInertia()//horrible stuff, needs a class for initialisation - p
 
     private void HandleEngine()//Horrible Class, Needs To go ASAP and be replaced by real Fucking Physics.
     {
-        if (_engineState == EngineStates.Running)
+        if (_engineState != EngineStates.Running)
+            return;
+
+        if (_carRpm.engineRpm < _carStats.Engine.StallRpm)
         {
-            if (_carRpm.engineRpm < _carStats.Engine.StallRpm)
-            {
-                Stall();
-            }
+            Stall();
         }
     }
 
@@ -252,10 +253,9 @@ private void InitInertia()//horrible stuff, needs a class for initialisation - p
 
     private void ComputeEngineOutputTorque()
     {
-        float netGeneratedTorque = TalosPhysics.ComputeGeneratedEngineTorque(_carStats.Engine.TorqueCurve.Evaluate(_carRpm.engineRpm), _throttle);
-        float netFrictionTorque = TalosPhysics.ComputeFrictionTorque(_frictionCoefficients, 1/*Oil Viscosity, Will be replaced later*/, TalosMath.RpmToRadS(_carRpm.engineRpm), _throttle);
+        float generatedTorque = _carStats.Engine.TorqueCurve.Evaluate(_carRpm.engineRpm);
 
-        _engineOutputTorque = TalosPhysics.EngineOutputTorque(netGeneratedTorque, netFrictionTorque);
+        _engineOutputTorque = Talos.ComputeEngineOutputTorque(_throttle, _carRpm.engineRpm, generatedTorque, _frictionCoefficients);
     }
 
     private void SendOutputTorqueToWheels()//includes the handbrakes and brakes, there's a better way to do this, will think about it as soon as the game runs.

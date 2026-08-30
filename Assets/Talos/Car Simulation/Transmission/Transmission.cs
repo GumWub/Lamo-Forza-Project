@@ -9,7 +9,8 @@ public static class Transmission
         if (!transmissionData.CanShift||shiftDirection == 0)
             return transmissionData;
 
-       transmissionData.Gear = Math.Clamp(transmissionData.Gear + shiftDirection, -1, transmissionData.TotalGears.Length);
+       transmissionData.Gear = transmissionData.Gear + shiftDirection;
+       transmissionData.Gear = Math.Clamp(transmissionData.Gear, -1, transmissionData.TotalGears.Length);
        transmissionData = SetGear(transmissionData);
 
         return transmissionData;
